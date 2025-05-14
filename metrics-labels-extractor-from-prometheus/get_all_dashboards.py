@@ -10,8 +10,10 @@ Requirements:
 The following environment variables must be set:
         •	GRAFANA_URL: The URL of your Grafana instance (e.g., http://localhost:3000)
         •	GRAFANA_SESSION_COOKIE: The Grafana session cookie used for authentication
+        •   GRAFANA_API_TOKEN: The Grafana API token used for authentication (optional)
         •	ALERTMANAGER_URL: The URL of your AlertManager instance (e.g., http://localhost:9093)
         •	ALERTMANAGER_SESSION_COOKIE: The AlertManager session cookie used for authentication
+        •   ALERTMANAGER_API_TOKEN: The AlertManager API token used for authentication (optional)
 
 Output:
 The results are saved in the following folder:
@@ -42,9 +44,13 @@ import requests
 
 GRAFANA_URL = os.getenv("GRAFANA_URL")  # example http://localhost:3000/
 GRAFANA_SESSION_COOKIE = os.getenv("GRAFANA_SESSION_COOKIE")  # this is optional
+GRAFANA_API_TOKEN = os.getenv("GRAFANA_API_TOKEN")  # this is optional
 ALERTMANAGER_URL = os.getenv("ALERTMANAGER_URL")  # example http://localhost:9093/
 ALERTMANAGER_SESSION_COOKIE = os.getenv(
     "ALERTMANAGER_SESSION_COOKIE"
+)  # this is optional
+ALERTMANAGER_API_TOKEN = os.getenv(
+    "ALERTMANAGER_API_TOKEN"
 )  # this is optional
 
 
@@ -58,11 +64,13 @@ ALERT_MANAGER_FILE = "alertmanager_promql_expressions.txt"
 headers = {}
 if GRAFANA_SESSION_COOKIE:
     headers["Cookie"] = f"grafana_session={GRAFANA_SESSION_COOKIE}"
+elif GRAFANA_API_TOKEN:
+    headers["Authorization"] = "Bearer " + GRAFANA_API_TOKEN
 
 
 def load_dashboard_metadata():
     #  gets all dashboards
-    url = f"{GRAFANA_URL.rstrip('/')}/api/search"
+    url = f"{GRAFANA_URL.rstrip('/')}/api/search?type=dash-db"
     response = requests.get(url, headers=headers)
     response.raise_for_status()
     dashboards = response.json()
@@ -124,6 +132,8 @@ def get_alertmanager_metrics(alertmanager_url):
     headers = {}
     if ALERTMANAGER_SESSION_COOKIE:
         headers["Cookie"] = f"alertmanager_session={ALERTMANAGER_SESSION_COOKIE}"
+    elif ALERTMANAGER_API_TOKEN:
+        headers["Authorization"] = "Bearer " + ALERTMANAGER_API_TOKEN
 
     url = f"{alertmanager_url.rstrip('/')}/api/v2/alerts"
     response = requests.get(url, headers=headers)
@@ -223,6 +233,6 @@ def main():
 
 
 if __name__ == "__main__":
-    if not GRAFANA_URL or not GRAFANA_SESSION_COOKIE:
-        raise EnvironmentError("GRAFANA_URL and GRAFANA_SESSION_COOKIE must be set")
+    if not GRAFANA_URL or (not GRAFANA_SESSION_COOKIE and not GRAFANA_API_TOKEN):
+        raise EnvironmentError("GRAFANA_URL and GRAFANA_SESSION_COOKIE/GRAFANA_API_TOKEN must be set")
     main()
